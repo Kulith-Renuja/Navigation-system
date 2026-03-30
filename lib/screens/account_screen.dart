@@ -63,7 +63,11 @@ class _AccountScreenState extends State<AccountScreen> {
             duration: Duration(seconds: 3),
           ),
         );
-        SemanticsService.announce('Name saved successfully', TextDirection.ltr);
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          'Name saved successfully',
+          TextDirection.ltr,
+        );
       } else {
         throw Exception("Could not authenticate user anonymously.");
       }
@@ -79,7 +83,11 @@ class _AccountScreenState extends State<AccountScreen> {
           duration: const Duration(seconds: 4),
         ),
       );
-      SemanticsService.announce('Error saving name', TextDirection.ltr);
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        'Error saving name',
+        TextDirection.ltr,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -99,9 +107,7 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget build(BuildContext context) {
     // Scaffold is not const because its children are dynamic and have state interactions.
     return Scaffold(
-      appBar: AppBar(
-        title: const Semantics(header: true, child: Text('Account')),
-      ),
+      appBar: AppBar(title: Semantics(header: true, child: Text('Account'))),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -137,7 +143,7 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
             const SizedBox(height: 32),
             if (_isLoading)
-              const Center(
+              Center(
                 child: Semantics(
                   label: 'Loading, please wait while saving your name',
                   child: CircularProgressIndicator(color: Colors.yellowAccent),

@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "150007207080",
+    "firebase_url": "https://navigation-system-7f736-default-rtdb.firebaseio.com",
+    "project_id": "navigation-system-7f736",
+    "storage_bucket": "navigation-system-7f736.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:150007207080:android:d1c644fff1208617a5de9d",
+        "android_client_info": {
+          "package_name": "com.example.flutter_app_a4"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_T2aL7D328fJTDk5nEAyqUJRlvAgqees"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:150007207080:android:c257e42f50d28968a5de9d",
+        "android_client_info": {
+          "package_name": "com.navigation_system"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_T2aL7D328fJTDk5nEAyqUJRlvAgqees"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
