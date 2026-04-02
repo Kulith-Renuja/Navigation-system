@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/indoor_graph.dart';
@@ -321,7 +320,7 @@ class _AddMapsScreenState extends State<AddMapsScreen> {
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
-          value: _selectedNodeId,
+          initialValue: _selectedNodeId,
           decoration: const InputDecoration(
             labelText: 'From Existing Node',
             labelStyle: TextStyle(color: Colors.white54),
@@ -342,7 +341,7 @@ class _AddMapsScreenState extends State<AddMapsScreen> {
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
-          value: _selectedDirection,
+          initialValue: _selectedDirection,
           decoration: const InputDecoration(
             labelText: 'Direction',
             labelStyle: TextStyle(color: Colors.white54),

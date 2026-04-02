@@ -3,6 +3,8 @@ import 'add_maps_screen.dart';
 import 'account_screen.dart';
 import 'indoor_nav_screen.dart';
 import 'outdoor_nav_screen.dart';
+// 1. Add this import at the top of home_screen.dart
+import 'vision_test_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -91,6 +93,34 @@ class HomeScreen extends StatelessWidget {
                   child: const Text(
                     'Outdoor\nNavigation',
                     textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+            // 2. Drop this inside your main Column children array:
+            const SizedBox(height: 16),
+            Expanded(
+              child: Semantics(
+                button: true,
+                label: 'Vision Test',
+                onTapHint: 'Navigate to real-time vision test screen',
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const VisionTestScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    // Distinguishable color for our developer test module
+                    backgroundColor: Colors.deepPurple,
+                  ),
+                  child: const Text(
+                    'Vision Test\n(Standalone)',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ),
               ),
