@@ -5,7 +5,7 @@ import 'indoor_nav_screen.dart';
 import 'outdoor_nav_screen.dart';
 // 1. Add this import at the top of home_screen.dart
 import 'vision_test_screen.dart';
-
+import 'sensor_test_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -119,6 +119,32 @@ class HomeScreen extends StatelessWidget {
                   ),
                   child: const Text(
                     'Vision Test\n(Standalone)',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Semantics(
+                button: true,
+                label: 'Sensors Test',
+                onTapHint: 'Navigate to real-time sensors test screen',
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SensorTestScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                  ),
+                  child: const Text(
+                    'Sensors & Feedback Test\n(Standalone)',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white, fontSize: 18),
                   ),
