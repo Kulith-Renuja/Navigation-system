@@ -146,7 +146,11 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
   }
 
   // A* Implementation
-  List<MapNode> _calculateAStar(IndoorGraph graph, MapNode start, MapNode dest) {
+  List<MapNode> _calculateAStar(
+    IndoorGraph graph,
+    MapNode start,
+    MapNode dest,
+  ) {
     if (start.id == dest.id) return [start];
 
     Set<String> closedSet = {};
@@ -157,8 +161,11 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     List<MapNode> openSet = [start];
 
     while (openSet.isNotEmpty) {
-      openSet.sort((a, b) =>
-          (fScore[a.id] ?? double.infinity).compareTo(fScore[b.id] ?? double.infinity));
+      openSet.sort(
+        (a, b) => (fScore[a.id] ?? double.infinity).compareTo(
+          fScore[b.id] ?? double.infinity,
+        ),
+      );
       var current = openSet.removeAt(0);
 
       if (current.id == dest.id) {
@@ -173,8 +180,9 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
           .toList();
 
       for (var edge in neighbors) {
-        String neighborId =
-            edge.fromNodeId == current.id ? edge.toNodeId : edge.fromNodeId;
+        String neighborId = edge.fromNodeId == current.id
+            ? edge.toNodeId
+            : edge.fromNodeId;
 
         if (closedSet.contains(neighborId)) continue;
 
@@ -184,10 +192,8 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
         if (tentativeGScore < (gScore[neighborId] ?? double.infinity)) {
           cameFrom[neighborId] = current.id;
           gScore[neighborId] = tentativeGScore;
-          var neighborNode =
-              graph.nodes.firstWhere((n) => n.id == neighborId);
-          fScore[neighborId] =
-              tentativeGScore + _heuristic(neighborNode, dest);
+          var neighborNode = graph.nodes.firstWhere((n) => n.id == neighborId);
+          fScore[neighborId] = tentativeGScore + _heuristic(neighborNode, dest);
 
           if (!openSet.any((n) => n.id == neighborNode.id)) {
             openSet.add(neighborNode);
@@ -203,7 +209,10 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
   }
 
   List<MapNode> _reconstructPath(
-      Map<String, String> cameFrom, MapNode current, IndoorGraph graph) {
+    Map<String, String> cameFrom,
+    MapNode current,
+    IndoorGraph graph,
+  ) {
     List<String> pathIds = [current.id];
     String currId = current.id;
     while (cameFrom.containsKey(currId)) {
@@ -225,33 +234,41 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
 
       // Find the edge connecting them
       var edge = _graph!.edges.firstWhere(
-          (e) =>
-              (e.fromNodeId == curr.id && e.toNodeId == next.id) ||
-              (e.fromNodeId == next.id && e.toNodeId == curr.id),
-          orElse: () => MapEdge(fromNodeId: '', toNodeId: '', direction: '', stepCount: 0));
+        (e) =>
+            (e.fromNodeId == curr.id && e.toNodeId == next.id) ||
+            (e.fromNodeId == next.id && e.toNodeId == curr.id),
+        orElse: () =>
+            MapEdge(fromNodeId: '', toNodeId: '', direction: '', stepCount: 0),
+      );
 
       double dx = next.x - curr.x;
       double dy = next.y - curr.y;
-      
+
       // Negative Y is North, Positive X is East.
       double targetHeading = atan2(dx, -dy) * 180 / pi;
       if (targetHeading < 0) targetHeading += 360;
 
-      steps.add(NavStep(
-        type: NavStateType.turning,
-        instruction: 'Turn towards ${next.name}',
-        targetHeading: targetHeading,
-        targetNode: next, // Not reaching it yet, but heading there
-      ));
+      steps.add(
+        NavStep(
+          type: NavStateType.turning,
+          instruction: 'Turn towards ${next.name}',
+          targetHeading: targetHeading,
+          targetNode: next, // Not reaching it yet, but heading there
+        ),
+      );
 
-      int stepsToWalk = edge.stepCount > 0 ? edge.stepCount : 10; // Fallback if 0
+      int stepsToWalk = edge.stepCount > 0
+          ? edge.stepCount
+          : 10; // Fallback if 0
 
-      steps.add(NavStep(
-        type: NavStateType.walking,
-        instruction: 'Walk $stepsToWalk steps to ${next.name}',
-        targetSteps: stepsToWalk,
-        targetNode: next,
-      ));
+      steps.add(
+        NavStep(
+          type: NavStateType.walking,
+          instruction: 'Walk $stepsToWalk steps to ${next.name}',
+          targetSteps: stepsToWalk,
+          targetNode: next,
+        ),
+      );
     }
     return steps;
   }
@@ -265,7 +282,10 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
       if (!status.isGranted) {
         if (mounted) {
           SemanticsService.sendAnnouncement(
-              View.of(context), "Activity recognition permission refused.", TextDirection.ltr);
+            View.of(context),
+            "Activity recognition permission refused.",
+            TextDirection.ltr,
+          );
         }
         return;
       }
@@ -293,10 +313,11 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
 
     if (_navQueue.isNotEmpty) {
       await _flutterTts.speak(
-          "You are at ${_startNode!.name}. ${_navQueue.first.instruction}.");
+        "You are at ${_startNode!.name}. ${_navQueue.first.instruction}.",
+      );
     }
-    
-    bool hasVibrator = await Vibration.hasVibrator() ?? false;
+
+    bool hasVibrator = await Vibration.hasVibrator();
     if (hasVibrator) {
       Vibration.vibrate(duration: 500, amplitude: 255);
     }
@@ -306,13 +327,13 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
 
   void _setupSensors() {
     _stepSubscription = Pedometer.stepCountStream.listen((event) {
-      if (!mounted || _isTransitioning || _currentStep?.type != NavStateType.walking) {
+      if (!mounted ||
+          _isTransitioning ||
+          _currentStep?.type != NavStateType.walking) {
         return;
       }
 
-      if (_initialStepCount == null) {
-        _initialStepCount = event.steps;
-      }
+      _initialStepCount ??= event.steps;
       int delta = event.steps - _initialStepCount!;
       setState(() {
         _stepsTaken = delta;
@@ -324,7 +345,9 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     });
 
     _compassSubscription = FlutterCompass.events!.listen((event) {
-      if (!mounted || _isTransitioning || _currentStep?.type != NavStateType.turning) {
+      if (!mounted ||
+          _isTransitioning ||
+          _currentStep?.type != NavStateType.turning) {
         return;
       }
 
@@ -344,8 +367,9 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
 
     if (_navQueue.isEmpty) {
       await _flutterTts.speak(
-          "You have arrived at your destination: ${_destNode!.name}.");
-      bool hasVibrator = await Vibration.hasVibrator() ?? false;
+        "You have arrived at your destination: ${_destNode!.name}.",
+      );
+      bool hasVibrator = await Vibration.hasVibrator();
       if (hasVibrator) {
         Vibration.vibrate(pattern: [0, 200, 100, 200, 100, 500]);
       }
@@ -378,14 +402,18 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
 
   void _startTurningState() {
     _hapticTimer?.cancel();
-    _hapticTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
-      if (!mounted || _isTransitioning || _currentStep?.type != NavStateType.turning) {
+    _hapticTimer = Timer.periodic(const Duration(milliseconds: 500), (
+      timer,
+    ) async {
+      if (!mounted ||
+          _isTransitioning ||
+          _currentStep?.type != NavStateType.turning) {
         timer.cancel();
         return;
       }
 
       if (_currentHeadingError > 10) {
-        bool hasVibrator = await Vibration.hasVibrator() ?? false;
+        bool hasVibrator = await Vibration.hasVibrator();
         if (hasVibrator) {
           Vibration.vibrate(duration: 100, amplitude: 100);
         }
@@ -399,10 +427,11 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     if (_isTransitioning) return;
     _isTransitioning = true;
     _hapticTimer?.cancel();
-    
+
     if (_navQueue.isNotEmpty) {
       await _flutterTts.speak(
-          "You are turned correctly. ${_navQueue.first.instruction}");
+        "You are turned correctly. ${_navQueue.first.instruction}",
+      );
     }
     _processNextStep();
   }
@@ -411,7 +440,7 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     if (_isTransitioning) return;
     _isTransitioning = true;
 
-    bool hasVibrator = await Vibration.hasVibrator() ?? false;
+    bool hasVibrator = await Vibration.hasVibrator();
     if (hasVibrator) {
       Vibration.vibrate(duration: 600, amplitude: 255);
     }
@@ -423,7 +452,9 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     }
 
     if (_navQueue.isNotEmpty) {
-      await _flutterTts.speak("Arrived at node. ${_navQueue.first.instruction}");
+      await _flutterTts.speak(
+        "Arrived at node. ${_navQueue.first.instruction}",
+      );
     }
 
     _processNextStep();
@@ -628,7 +659,11 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
             child: Semantics(
               label: 'Visual map view showing path',
               child: CustomPaint(
-                painter: IndoorMapPainter(_graph!, _pathNodes, _activeNodeTracker!),
+                painter: IndoorMapPainter(
+                  _graph!,
+                  _pathNodes,
+                  _activeNodeTracker!,
+                ),
               ),
             ),
           ),
@@ -661,7 +696,8 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
             padding: const EdgeInsets.all(16),
             child: Semantics(
               button: true,
-              label: 'Manual Override Button. Double tap to force next step if sensor fails.',
+              label:
+                  'Manual Override Button. Double tap to force next step if sensor fails.',
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.yellowAccent,
@@ -803,7 +839,10 @@ class IndoorMapPainter extends CustomPainter {
 
     for (int i = 0; i < pathNodes.length - 1; i++) {
       canvas.drawLine(
-          getOffset(pathNodes[i]), getOffset(pathNodes[i + 1]), pathEdgePaint);
+        getOffset(pathNodes[i]),
+        getOffset(pathNodes[i + 1]),
+        pathEdgePaint,
+      );
     }
 
     // Nodes
