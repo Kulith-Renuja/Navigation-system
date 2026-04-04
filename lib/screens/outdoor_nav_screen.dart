@@ -13,6 +13,9 @@ import 'package:http/http.dart' as http;
 import 'package:vibration/vibration.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+// 1. IMPORT ADDED HERE
+import '../services/vision_service.dart';
+
 const String googleMapsApiKey = "AIzaSyBK35PHUZQptE17QhepcC_m86y7P-uDzTo";
 
 class DirectionInstruction {
@@ -36,7 +39,8 @@ class OutdoorNavScreen extends StatefulWidget {
   State<OutdoorNavScreen> createState() => _OutdoorNavScreenState();
 }
 
-class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
+class _OutdoorNavScreenState extends State<OutdoorNavScreen>
+    with WidgetsBindingObserver {
   // Controllers
   final Completer<GoogleMapController> _controller = Completer();
   final stt.SpeechToText _speech = stt.SpeechToText();
@@ -60,24 +64,46 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _requestPermissions();
     _initSpeech();
+
+    // 2. TTS WAIT OPTION ADDED HERE
+    _flutterTts.awaitSpeakCompletion(true);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _speech.cancel();
     _positionStream?.cancel();
     _stopObjectDetection();
     super.dispose();
   }
 
-  // AI Orchestration (Placeholders)
-  void _startObjectDetection() {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused) {
+      // User minimized the app. Pause the AI camera to save battery!
+      VisionService.instance.stopDetection();
+    } else if (state == AppLifecycleState.resumed) {
+      // User opened the app back up. Turn the AI back on if we are navigating!
+      if (_isNavigating) {
+        VisionService.instance.startDetection();
+      }
+    }
+  }
+
+  // 3. AI START UPDATED HERE
+  void _startObjectDetection() async {
+    await VisionService.instance.startDetection();
     debugPrint("AI Vision / Object Detection Started.");
   }
 
-  void _stopObjectDetection() {
+  // 4. AI STOP UPDATED HERE
+  void _stopObjectDetection() async {
+    await VisionService.instance.stopDetection();
     debugPrint("AI Vision / Object Detection Stopped.");
   }
 
@@ -143,11 +169,9 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
       await _speech.stop();
 
       if (_spokenDestination.trim().isNotEmpty) {
-        // It heard the word! Let the user know before calculating.
         await _flutterTts.speak("Searching for $_spokenDestination.");
         _fetchDirections(_spokenDestination);
       } else {
-        // It failed to hear! Speak the error out loud.
         String errorText = "Failed to hear destination. Try again.";
         setState(() {
           _currentStatusText = errorText;
@@ -164,7 +188,6 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
     }
   }
 
-  // Regex to strip all HTML Elements cleanly
   String _stripHtml(String htmlString) {
     RegExp exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: true);
     return htmlString.replaceAll(exp, '').replaceAll('&nbsp;', ' ').trim();
@@ -208,7 +231,6 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
           var route = data['routes'][0];
           var leg = route['legs'][0];
 
-          // Set Destination Marker
           double destLat = leg['end_location']['lat'];
           double destLng = leg['end_location']['lng'];
 
@@ -221,7 +243,6 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
             ),
           );
 
-          // Draw Polyline
           String polylineStr = route['overview_polyline']['points'];
           List<PointLatLng> result = PolylinePoints.decodePolyline(polylineStr);
 
@@ -242,7 +263,6 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
             ),
           );
 
-          // Generate Parsed Instruction Queue
           _instructionQueue.clear();
           var steps = leg['steps'];
           for (var step in steps) {
@@ -321,7 +341,7 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
       }
       _flutterTts.speak(errorMsg);
     }
-  } // <-- End of _fetchDirections
+  }
 
   // --- Live GPS Tracking ---
   void _startLiveTracking() {
@@ -359,7 +379,6 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
       nextStep.endLocation.longitude,
     );
 
-    // 15 meters arrival threshold
     if (dist < 15.0) {
       _instructionQueue.removeAt(0);
 
@@ -374,6 +393,7 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
     }
   }
 
+  // 5. ANNOUNCE INSTRUCTION UPDATED HERE (AI LOCK added)
   void _announceInstruction(String text) async {
     setState(() {
       _currentStatusText = text;
@@ -383,7 +403,11 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen> {
       text,
       TextDirection.ltr,
     );
+
+    // Lock the AI voice, speak the routing, then unlock!
+    VisionService.instance.isNavigationSpeaking = true;
     await _flutterTts.speak(text);
+    VisionService.instance.isNavigationSpeaking = false;
   }
 
   void _endNavigation({bool arrived = false}) async {

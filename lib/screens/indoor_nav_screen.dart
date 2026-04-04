@@ -12,6 +12,8 @@ import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../models/indoor_graph.dart';
+// 1. IMPORT ADDED HERE
+import '../services/vision_service.dart';
 
 enum NavStateType { walking, turning }
 
@@ -38,7 +40,8 @@ class IndoorNavScreen extends StatefulWidget {
   State<IndoorNavScreen> createState() => _IndoorNavScreenState();
 }
 
-class _IndoorNavScreenState extends State<IndoorNavScreen> {
+class _IndoorNavScreenState extends State<IndoorNavScreen>
+    with WidgetsBindingObserver {
   // Map and Status
   IndoorGraph? _graph;
   bool _isLoading = true;
@@ -69,14 +72,35 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkPermissions();
     _fetchMapData();
+
+    // 2. TTS WAIT OPTION ADDED HERE
+    _flutterTts.awaitSpeakCompletion(true);
   }
 
   @override
   void dispose() {
+    // 3. AI STOP ADDED HERE
+    WidgetsBinding.instance.removeObserver(this);
+    VisionService.instance.stopDetection();
     _cleanupSensors();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused) {
+      // User minimized the app. Pause the AI camera to save battery!
+      VisionService.instance.stopDetection();
+    } else if (state == AppLifecycleState.resumed) {
+      // User opened the app back up. Turn the AI back on if we are navigating!
+      if (_isNavigating) {
+        VisionService.instance.startDetection();
+      }
+    }
   }
 
   Future<void> _checkPermissions() async {
@@ -292,13 +316,17 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     }
 
     if (_startNode!.id == _destNode!.id) {
+      VisionService.instance.isNavigationSpeaking = true;
       await _flutterTts.speak("You are already at your destination.");
+      VisionService.instance.isNavigationSpeaking = false;
       return;
     }
 
     List<MapNode> path = _calculateAStar(_graph!, _startNode!, _destNode!);
     if (path.isEmpty) {
+      VisionService.instance.isNavigationSpeaking = true;
       await _flutterTts.speak("No path found to destination.");
+      VisionService.instance.isNavigationSpeaking = false;
       return;
     }
 
@@ -312,15 +340,21 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     });
 
     if (_navQueue.isNotEmpty) {
+      // Lock AI voice
+      VisionService.instance.isNavigationSpeaking = true;
       await _flutterTts.speak(
         "You are at ${_startNode!.name}. ${_navQueue.first.instruction}.",
       );
+      VisionService.instance.isNavigationSpeaking = false;
     }
 
     bool hasVibrator = await Vibration.hasVibrator();
     if (hasVibrator) {
       Vibration.vibrate(duration: 500, amplitude: 255);
     }
+
+    // 4. AI START DETECTING HERE
+    await VisionService.instance.startDetection();
 
     _processNextStep();
   }
@@ -366,14 +400,21 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     if (!mounted) return;
 
     if (_navQueue.isEmpty) {
+      VisionService.instance.isNavigationSpeaking = true;
       await _flutterTts.speak(
         "You have arrived at your destination: ${_destNode!.name}.",
       );
+      VisionService.instance.isNavigationSpeaking = false;
+
       bool hasVibrator = await Vibration.hasVibrator();
       if (hasVibrator) {
         Vibration.vibrate(pattern: [0, 200, 100, 200, 100, 500]);
       }
+
+      // 5. AI STOP DETECTING HERE
+      await VisionService.instance.stopDetection();
       _cleanupSensors();
+
       if (mounted) {
         setState(() {
           _isNavigating = false;
@@ -429,9 +470,11 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     _hapticTimer?.cancel();
 
     if (_navQueue.isNotEmpty) {
+      VisionService.instance.isNavigationSpeaking = true;
       await _flutterTts.speak(
         "You are turned correctly. ${_navQueue.first.instruction}",
       );
+      VisionService.instance.isNavigationSpeaking = false;
     }
     _processNextStep();
   }
@@ -452,9 +495,11 @@ class _IndoorNavScreenState extends State<IndoorNavScreen> {
     }
 
     if (_navQueue.isNotEmpty) {
+      VisionService.instance.isNavigationSpeaking = true;
       await _flutterTts.speak(
         "Arrived at node. ${_navQueue.first.instruction}",
       );
+      VisionService.instance.isNavigationSpeaking = false;
     }
 
     _processNextStep();
