@@ -159,7 +159,15 @@ class _AddMapsScreenState extends State<AddMapsScreen> {
     });
 
     try {
-      // Bypassing Cloud Storage and saving directly to your free Firestore Database!
+      // 1. Save the building name to the Location's "Registry" array
+      await FirebaseFirestore.instance
+          .collection('maps')
+          .doc(_graph.locationName)
+          .set({
+            'buildings': FieldValue.arrayUnion([_graph.buildingName]),
+          }, SetOptions(merge: true));
+
+      // 2. Save the actual Map Graph JSON exactly where you requested
       await FirebaseFirestore.instance
           .collection('maps')
           .doc(_graph.locationName)
