@@ -136,7 +136,7 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen>
     );
   }
 
-  // --- Voice Input Pipeline ---
+  // --- UPGRADED Voice Input Pipeline ---
   void _startListening() async {
     if (_isNavigating) return;
 
@@ -146,15 +146,19 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen>
 
       setState(() {
         _isListening = true;
+        _spokenDestination = ""; // Clear the vault when you start talking
         _currentStatusText = "Listening...";
       });
 
       _speech.listen(
         onResult: (val) {
-          setState(() {
-            _spokenDestination = val.recognizedWords;
-            _currentStatusText = "Recognized: $_spokenDestination";
-          });
+          // VAULT LOCK: Only save the word if it is NOT empty!
+          if (val.recognizedWords.trim().isNotEmpty) {
+            setState(() {
+              _spokenDestination = val.recognizedWords;
+              _currentStatusText = "Recognized: $_spokenDestination";
+            });
+          }
         },
         listenFor: const Duration(minutes: 1),
       );
@@ -168,9 +172,19 @@ class _OutdoorNavScreenState extends State<OutdoorNavScreen>
       });
       await _speech.stop();
 
-      if (_spokenDestination.trim().isNotEmpty) {
-        await _flutterTts.speak("Searching for $_spokenDestination.");
-        _fetchDirections(_spokenDestination);
+      // THE FIX: If the memory is empty when they let go, wait 1 second for Google to catch up!
+      if (_spokenDestination.isEmpty) {
+        setState(() {
+          _currentStatusText = "Processing...";
+        });
+        await Future.delayed(const Duration(seconds: 1));
+      }
+
+      String finalDestination = _spokenDestination.trim();
+
+      if (finalDestination.isNotEmpty) {
+        await _flutterTts.speak("Searching for $finalDestination.");
+        _fetchDirections(finalDestination);
       } else {
         String errorText = "Failed to hear destination. Try again.";
         setState(() {
