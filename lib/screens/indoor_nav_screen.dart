@@ -481,6 +481,7 @@ class _IndoorNavScreenState extends State<IndoorNavScreen>
       var curr = route[i];
       var next = route[i + 1];
 
+      // Find the edge connecting the two nodes
       var edge = _graph!.edges.firstWhere(
         (e) =>
             (e.fromNodeId == curr.id && e.toNodeId == next.id) ||
@@ -489,21 +490,54 @@ class _IndoorNavScreenState extends State<IndoorNavScreen>
             MapEdge(fromNodeId: '', toNodeId: '', direction: '', stepCount: 0),
       );
 
+      // Calculate compass heading
       double dx = next.x - curr.x;
       double dy = next.y - curr.y;
 
       double targetHeading = atan2(dx, -dy) * 180 / pi;
       if (targetHeading < 0) targetHeading += 360;
 
+      // --- SMART DIRECTION LOGIC ---
+      String turnDirection = "";
+      if (edge.direction.isNotEmpty) {
+        if (edge.fromNodeId == curr.id) {
+          // Moving forward along the edge: Use the exact saved direction
+          turnDirection = edge.direction;
+        } else {
+          // Moving backward along the edge: Invert the turn!
+          if (edge.direction == 'left')
+            turnDirection = 'right';
+          else if (edge.direction == 'right')
+            turnDirection = 'left';
+          else if (edge.direction == 'forward')
+            turnDirection = 'backward';
+          else if (edge.direction == 'backward')
+            turnDirection = 'forward';
+        }
+      }
+
+      // Format the phrase gracefully for Text-to-Speech
+      String turnPhrase = "towards";
+      if (turnDirection == 'left')
+        turnPhrase = "left towards";
+      else if (turnDirection == 'right')
+        turnPhrase = "right towards";
+      else if (turnDirection == 'backward')
+        turnPhrase = "around towards";
+      else if (turnDirection == 'forward')
+        turnPhrase = "forward towards";
+
+      // Add Turning Step
       steps.add(
         NavStep(
           type: NavStateType.turning,
-          instruction: 'Turn towards ${next.name}',
+          instruction: 'Turn $turnPhrase ${next.name}',
           targetHeading: targetHeading,
           targetNode: next,
         ),
       );
 
+      // Add Walking Step
       int stepsToWalk = edge.stepCount > 0 ? edge.stepCount : 10;
 
       steps.add(
